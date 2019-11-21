@@ -1,13 +1,11 @@
 import numpy as np
+import time 
 
-w=1.9767
-correction=0.0
-Ndw = 10000
-dw = 1.0 / Ndw
+tic=time.time()
 
 # number of grids in x/y-direction
-Nx = 64
-Ny = 64
+Nx = 64 
+Ny = 64 
 
 # size of computational domain
 Lx = 1.0
@@ -18,14 +16,17 @@ dx = Lx / (Nx - 1)
 dy = Ly / (Ny - 1)
 
 # array for storing source
-Mass = np.zeros((Nx, Ny))
+Mass           = np.zeros((Nx, Ny))
 
 # array for storing numerical potential
 SimulPotential = np.zeros((Nx, Ny))
 
 # array for storing exact potential
-ExactPotential     = np.zeros((Nx, Ny))
+ExactPotential = np.zeros((Nx, Ny))
 
+
+# maximum number of iterations
+MaxItr = 100000
 
 # assign electric charge in source array
 for i in range(Nx):
@@ -53,9 +54,10 @@ for iy in range(Nx):
 
 
 # initial guess for performing relaxation
-for ix in range(Nx):
-  for iy in range(Ny):
-    SimulPotential[ix][iy] = 0.5
+#for ix in range(1, Nx-2):
+#  for iy in range(1, Ny-2):
+#    SimulPotential[ix][iy] = 0.5
+SimulPotential[1:-2,1:-2] = 0.5
 
 
 
@@ -75,73 +77,58 @@ itr = 0
 # Successive Overrelaxation method (SOR)
 #########################################
 
-while ( True ):
+while ( itr < MaxItr ):
 
 #   the L1-norm error between the consecutive iteration cycles
     Error = 0.0
 
-    itr+=1
+    itr += 1
 
-#   update odd cells first
-    for x in range( 1, Nx-1):
-      for y in range( 1, Ny-1):
-        if ( (x+y)%2 == 1 ):
+    UpdatedSimulPotential = 0.25 * ( SimulPotential[1:-1,0:-2] 
+                                   + SimulPotential[0:-2,1:-1]
+                                   + SimulPotential[1:-1,2:  ] 
+                                   + SimulPotential[2:  ,1:-1]  - dx * dy * Mass[1:-1,1:-1] )
 
-          correction = 0.25 * w * (   SimulPotential[x+1][y  ]
-                                    + SimulPotential[x-1][y  ]
-                                    + SimulPotential[x  ][y+1] 
-                                    + SimulPotential[x  ][y-1] - dx*dy * Mass[x][y] - 4.0 * SimulPotential[x][y] )
+  # sum of error
+    Error = np.sum( np.absolute( np.subtract( UpdatedSimulPotential , SimulPotential[1:-1,1:-1] ) ) )
+    #Error = np.sum( np.absolute(  UpdatedSimulPotential - SimulPotential[1:-1,1:-1]  ) )
+  
 
-      	# sum of error
-          Error += abs( correction/SimulPotential[x][y] )
-        
-      	# update grids
-          SimulPotential[x][y] += correction
+  # calculate L-1 norm error
+    Error /= ( ( Nx - 2 ) * ( Ny - 2 ) )
 
-#   then update even cells
-    for x in range( 1, Nx-1):
-      for y in range( 1, Ny-1):
-        if ( (x+y)%2 == 0 ):
 
-          correction = 0.25 * w * (   SimulPotential[x+1][y  ]
-                                    + SimulPotential[x-1][y  ]
-                                    + SimulPotential[x  ][y+1]
-                                    + SimulPotential[x  ][y-1] - dx*dy * Mass[x][y] - 4.0 * SimulPotential[x][y] )
+  # copy data from UpdatedSimulPotential to SimulPotential
+    SimulPotential[1:-1,1:-1] = UpdatedSimulPotential
 
-      	# sum of error
-          Error += abs( correction/SimulPotential[x][y] )
-        
-      	# update grids
-          SimulPotential[x][y] += correction
-
-      	# calculate L-1 norm error
-          Error /= ( Nx - 2 ) * ( Ny - 2 )
-
-          if ( Error < Threshold ):
-           break
+    if ( Error < Threshold ):
+     break
 
 # exact solution
 # Ref: https://math.stackexchange.com/questions/1251117/analytic-solution-to-poisson-equation
 
+# array for storing relative error
+RelativeError = np.zeros((Nx, Ny))
+
 # L1-norm error between exact and numerical solution
 L1Error = 0.0
 
-for ix in range(Nx):
-  for iy in range(Ny):
-     x = ix*dx
-     y = iy*dy
+for i in range(1,Nx-1):
+  for j in range(1,Ny-1):
+     x = i*dx
+     y = j*dy
 
-     ExactPotential[i][j] = x*y*(1-x)*(1-y)*exp(x-y)
+     ExactPotential[i][j] = x*y*(1-x)*(1-y)*np.exp(x-y)
 
 	 # calculate relative error between exact and numerical solution
-     RelativeError[i][j] = 1 - ExactPotential[i][j] / Potential[i][j]
+     RelativeError[i][j] = 1 - ExactPotential[i][j] / SimulPotential[i][j]
 
 	 # L1-norm error between exact and numerical solution
      if ( RelativeError[i][j] == RelativeError[i][j] ):
 	      L1Error += abs( RelativeError[i][j] )
 
 
-L1Error /= (Nx-2)*(Ny-2)
+L1Error /= ( (Nx-2)*(Ny-2) )
 
 
 
@@ -150,12 +137,14 @@ L1Error /= (Nx-2)*(Ny-2)
 f = open("potential.dat","w+")
 
 # header
-f.write("#L1Error: %20.16e\n" % L1Error);
-f.write("#iterations: %d\n" % itr);
-f.write("#========================================================\n");
-f.write("%13s  %14s  %14s %16s %20s %20s\n","#x[1]", "y[2]", "Mass[3]", "Potential[4]", "ExactPotential[5]", "RelativeError[6]" );
+f.write("#L1Error: %20.16e\n" % L1Error)
+f.write("#iterations: %d\n" % itr)
+f.write("#========================================================\n")
+f.write("#%19s%20s%20s%20s%20s%20s\n" %  ("x[1]", "y[2]", "Mass[3]", "Potential[4]",  "ExactPotential[5]",  "RelativeError[6]") )
 
 #  potential data
-for ix in range(Nx):
-  for iy in range(Ny):
-       f.write( "%10.7e   %10.7e   %10.7e   %10.7e   %10.7e   %10.7e\n" % (  x*dx, y*dy, Mass[x][y], Potential[x][y], ExactPotential[x][y], RelativeError[x][y] ) );
+for x in range(Nx):
+  for y in range(Ny):
+       f.write( "%20.7e%20.7e%20.7e%20.7e%20.7e%20.7e\n" % (  x*dx, y*dy, Mass[x][y], SimulPotential[x][y], ExactPotential[x][y], RelativeError[x][y] ) )
+
+toc=time.time()
