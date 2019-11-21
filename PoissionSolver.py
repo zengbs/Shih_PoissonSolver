@@ -1,9 +1,13 @@
 import numpy as np
 
+w=1.9767
+correction=0.0
+Ndw = 10000
+dw = 1.0 / Ndw
 
 # number of grids in x/y-direction
-Nx = 256
-Ny = 256
+Nx = 64
+Ny = 64
 
 # size of computational domain
 Lx = 1.0
@@ -17,19 +21,19 @@ dy = Ly / (Ny - 1)
 Mass = np.zeros((Nx, Ny))
 
 # array for storing numerical potential
-NumericalPotential = np.zeros((Nx, Ny))
+SimulPotential = np.zeros((Nx, Ny))
 
 # array for storing exact potential
 ExactPotential     = np.zeros((Nx, Ny))
 
 
 # assign electric charge in source array
-for ix in range(Nx):
-  for iy in range(Ny):
-    x = ix*dx
-	y = jy*dy
+for i in range(Nx):
+  for j in range(Ny):
+    x = i*dx
+    y = j*dy
 
-    Mass = 2*x*(y-1)*(y-2*x+x*y+2)*np.exp(x-y)
+    Mass[i][j] = 2*x*(y-1)*(y-2*x+x*y+2)*np.exp(x-y)
 
 
 # Given BC condition along x-direction
@@ -51,7 +55,7 @@ for iy in range(Nx):
 # initial guess for performing relaxation
 for ix in range(Nx):
   for iy in range(Ny):
-    NumericalPotential[ix][iy] = 0.5
+    SimulPotential[ix][iy] = 0.5
 
 
 
@@ -76,28 +80,28 @@ while ( True ):
 #   the L1-norm error between the consecutive iteration cycles
     Error = 0.0
 
-    itr++
+    itr+=1
 
 #   update odd cells first
-    for ix in range( 1, Nx-1):
-      for iy in range( 1, Ny-1):
-        if ( (ix+iy)%2 == 1 ):
+    for x in range( 1, Nx-1):
+      for y in range( 1, Ny-1):
+        if ( (x+y)%2 == 1 ):
 
           correction = 0.25 * w * (   SimulPotential[x+1][y  ]
                                     + SimulPotential[x-1][y  ]
-                                    + SimulPotential[x  ][y+1]
+                                    + SimulPotential[x  ][y+1] 
                                     + SimulPotential[x  ][y-1] - dx*dy * Mass[x][y] - 4.0 * SimulPotential[x][y] )
 
       	# sum of error
-          Error += FABS( correction/SimulPotential[x][y] )
+          Error += abs( correction/SimulPotential[x][y] )
         
       	# update grids
           SimulPotential[x][y] += correction
 
 #   then update even cells
-    for ix in range( 1, Nx-1):
-      for iy in range( 1, Ny-1):
-        if ( (ix+iy)%2 == 0 ):
+    for x in range( 1, Nx-1):
+      for y in range( 1, Ny-1):
+        if ( (x+y)%2 == 0 ):
 
           correction = 0.25 * w * (   SimulPotential[x+1][y  ]
                                     + SimulPotential[x-1][y  ]
@@ -105,7 +109,7 @@ while ( True ):
                                     + SimulPotential[x  ][y-1] - dx*dy * Mass[x][y] - 4.0 * SimulPotential[x][y] )
 
       	# sum of error
-          Error += FABS( correction/SimulPotential[x][y] )
+          Error += abs( correction/SimulPotential[x][y] )
         
       	# update grids
           SimulPotential[x][y] += correction
@@ -133,8 +137,8 @@ for ix in range(Nx):
      RelativeError[i][j] = 1 - ExactPotential[i][j] / Potential[i][j]
 
 	 # L1-norm error between exact and numerical solution
-	 if ( RelativeError[i][j] == RelativeError[i][j] ):
-	      L1Error += FABS( RelativeError[i][j] )
+     if ( RelativeError[i][j] == RelativeError[i][j] ):
+	      L1Error += abs( RelativeError[i][j] )
 
 
 L1Error /= (Nx-2)*(Ny-2)
