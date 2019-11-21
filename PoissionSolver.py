@@ -38,27 +38,22 @@ for i in range(Nx):
 
 
 # Given BC condition along x-direction
-for ix in range(Nx):
-  SimulPotential[ix][Ny-1] = 0.0
-  SimulPotential[ix][   0] = 0.0
-  ExactPotential[ix][Ny-1] = 0.0
-  ExactPotential[ix][   0] = 0.0
+SimulPotential[0:-1, 0:1] = 0.0
+SimulPotential[0:-1,-1: ] = 0.0
+ExactPotential[0:-1, 0:1] = 0.0
+ExactPotential[0:-1,-1: ] = 0.0
+
 
 
 # Given BC condition along y-direction
-for iy in range(Nx):
-  SimulPotential[   0][iy] = 0.0
-  SimulPotential[Nx-1][iy] = 0.0
-  ExactPotential[   0][iy] = 0.0
-  ExactPotential[Nx-1][iy] = 0.0
+SimulPotential[0:1,0:] = 0.0
+SimulPotential[-1:,0:] = 0.0
+ExactPotential[0:1,0:] = 0.0
+ExactPotential[-1:,0:] = 0.0
 
 
 # initial guess for performing relaxation
-#for ix in range(1, Nx-2):
-#  for iy in range(1, Ny-2):
-#    SimulPotential[ix][iy] = 0.5
 SimulPotential[1:-2,1:-2] = 0.5
-
 
 
 
@@ -69,12 +64,12 @@ EPSILON = np.finfo(np.float64).eps
 Threshold = 100*EPSILON
 
 
-# number of iteration
+# counter for iteration
 itr = 0
 
 #########################################
 # Main Loop for relaxation
-# Successive Overrelaxation method (SOR)
+# Jacobi method
 #########################################
 
 while ( itr < MaxItr ):
@@ -91,7 +86,6 @@ while ( itr < MaxItr ):
 
   # sum of error
     Error = np.sum( np.absolute( np.subtract( UpdatedSimulPotential , SimulPotential[1:-1,1:-1] ) ) )
-    #Error = np.sum( np.absolute(  UpdatedSimulPotential - SimulPotential[1:-1,1:-1]  ) )
   
 
   # calculate L-1 norm error
