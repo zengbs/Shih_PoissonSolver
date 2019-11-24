@@ -10,8 +10,8 @@ tic=time.time()
 ##########################################
                                                  
 # number of grids in x/y-direction               
-Nx = 64                                          
-Ny = 64                                          
+Nx = 128                                          
+Ny = 128
                                                  
 # size of computational domain                   
 Lx = 1.0                                         
@@ -30,8 +30,9 @@ dy = Ly / (Ny - 1)
 # input userdefined parameters                 
 ##########################################
 
-## Problem 1 ( a charge around conductor plate )
-##-----------------------------------------------------------
+# Problem 1 ( a charge around conductor plate )
+#-----------------------------------------------------------
+#f = open("charge_plate.dat","w+")
 ## x coordinate of charge                         
 #DistX = 0.5*Lx                                   
 ## y coordinate of charge                         
@@ -42,6 +43,7 @@ dy = Ly / (Ny - 1)
 
 # Problem 2 ( parallel plate capacitor )
 #-----------------------------------------------------------
+f = open("capacitor.dat","w+")
 # distance between parallel plate
 Dist = 0.2*Ly
 
@@ -54,24 +56,25 @@ Length = 0.5*Lx
 # position of center of capacitor
 CenterX = 0.5*Lx
 CenterY = 0.5*Ly
-
-# surface charge on parallel plate
+#
+## surface charge on parallel plate
 Q = 1.0
 
-# Problem 3 ( mirror charge )
-#-----------------------------------------------------------
-
-# x coordinate of center of charges
-DistX = 0.5*Lx                                   
-
-# y coordinate of center of charges
-DistY = 0.5*Ly                                   
-
-# distance betrween charges
-Dist   = 0.2*Ly                                                 
-
-# charge
-Q = 1.0
+## Problem 3 ( mirror charge )
+##-----------------------------------------------------------
+#
+#f = open("mirror_charge.dat","w+")
+## x coordinate of center of charges
+#DistX = 0.5*Lx                                   
+#
+## y coordinate of center of charges
+#DistY = 0.5*Ly                                   
+#
+## distance betrween charges
+#Dist   = 0.2*Ly                                                 
+#
+## charge
+#Q = 1.0
 
 
 ##########################################
@@ -111,26 +114,29 @@ for i in range(Nx):
 #      Charge[i][j] = Q
 #    else:
 #      Charge[i][j] = 0.0
-#
-#
+
+
 # Problem 2 ( parallel plate capacitor )
 #-----------------------------------------------------------
-#
-#    if ( abs(x-CenterX) <= 0.5*Length and ( abs(y-CenterY-0.5*Dist) <= 0.5*Thickness or abs(y-CenterY+0.5*Dist) <= 0.5*Thickness )):
-#       Charge[i][j] = Q 
-#    else:
-#       Charge[i][j] = 0.0
-#
-# Problem 3 ( mirror charge )
-#-----------------------------------------------------------
-    if ( ( abs(x - DistX ) <= dx and abs(y - DistY - 0.5*Dist ) <= dy ) or ( abs(x - DistX ) <= dx and abs(y - DistY + 0.5*Dist ) <= dy )):
-      Charge[i][j] = Q
+    if   ( abs(x-CenterX) <= 0.5*Length and abs(y-CenterY-0.5*Dist) <= 0.5*Thickness ):
+       Charge[i][j] = Q 
+    elif ( abs(x-CenterX) <= 0.5*Length and abs(y-CenterY+0.5*Dist) <= 0.5*Thickness ):
+       Charge[i][j] = -Q 
     else:
-      Charge[i][j] = 0.0
-  
-     
+       Charge[i][j] = 0.0
 
-
+# Problem 3 ( mirror charge )
+##-----------------------------------------------------------
+#    if   ( ( abs(x - DistX ) <= dx and abs(y - DistY - 0.5*Dist ) <= dy ) ):
+#      Charge[i][j] = Q
+#    elif ( ( abs(x - DistX ) <= dx and abs(y - DistY + 0.5*Dist ) <= dy ) ):
+#      Charge[i][j] = -Q
+#    else:
+#      Charge[i][j] = 0.0
+#  
+#     
+#
+#
 # Exact solution
 #-----------------------------------------------------------
 #    Charge[i][j] = 2*x*(y-1)*(y-2*x+x*y+2)*np.exp(x-y)
@@ -212,7 +218,6 @@ SimulPotential, itr = PoissionSolver( SimulPotential, Charge, Nx, dx, Ny, dy, Th
 # dump data to disk
 ##########################################
 
-f = open("potential.dat","w+")
 
 # header
 f.write("#iterations: %d\n" % itr)
